@@ -29,17 +29,19 @@ def nextDay(startDay):
 
 class RadiationDataSet(object):
   """Class that holds a radiation dataset and offers batch functions to provide data to train"""
-  def __init__(self, images, labels, size):
+  def __init__(self, images, labels, size, predictTime, previousImages):
     assert images.shape[0] == labels.shape[0], (
           "images.shape: %s labels.shape: %s" % (images.shape,
                                                  labels.shape))
-    self._num_examples = images.shape[0]
-    self._perm=np.arange(self._num_examples)
+    self._num_examples = images.shape[0]-previousImages
+    self._perm=np.arange(previousImages,self._num_examples+previousImages)
     np.random.shuffle(self._perm)
 
     self._images = images
     self._labels = labels
     self._size = size
+    self._predTime = predictTime
+    self._prevImg = previousImages
     
     self._epochs_completed = 0
     self._index_in_epoch = 0
@@ -63,11 +65,14 @@ class RadiationDataSet(object):
 
   def createBatch(self,start,end):
     """Creates a batch with the images in the permutation self._perm"""
-    batch=np.empty((0,self._size,self._size)) 
+    batch=np.empty((0,self._size,self._size,self._prevImg)) 
     batchLabels=[]
 
     for i in xrange(start,end):
-      batch=np.append(batch,np.reshape(self._images[self._perm[i],:,:],[1,self._size,self._size]),axis=0)
+      auxBatch= np.empty((self._size,self._size,0)) 
+      for j in xrange(self._perm[i]-self._prevImg+1,self._perm[i]+1):
+        auxBatch=np.append(auxBatch, np.reshape(self._images[j,:,:],[self._size,self._size,1]), axis=2)
+      batch=np.append(batch,np.reshape(auxBatch,[1,self._size,self._size,self._prevImg]),axis=0)
       batchLabels.append(self._labels[self._perm[i],:])
 
     return batch, np.array(batchLabels)
@@ -95,6 +100,7 @@ class RadiationDataSet(object):
     """Return the next `batch_size` examples from this data set without permuting."""  
     start = self._val_index
     self._val_index += batch_size
+    self._perm=np.arange(self._prevImg,self._num_examples)
     if self._val_index > self._num_examples:
       # Finished epoch
       # Start next epoch
@@ -103,15 +109,16 @@ class RadiationDataSet(object):
       self._val_index = batch_size
       assert batch_size <= self._num_examples
     end = self._val_index
-    return self._images[start:end,:,:], self._labels[start:end,:]
+    return self.createBatch(start,end)
 
-def loadRadiationData(dataDir,startDate,endDate,size, predictTime):
+def loadRadiationData(dataDir,startDate,endDate,size, predictTime, previousImages):
   """ Reads the files from the different folders and loads a RadiationDataset ready to use it in the training"""
   """ 	dataDir: folder where the data is stored
 	startDate: first day that will be loaded in format [year, month, day]
 	endDate: Day to stop loading data in format [year, month, day]
 	size: window size around the center of the image
-	predictTime: Number of measures to be predicted after the last input"""
+	predictTime: Number of measures to be predicted after the last input
+	previousImages: Number of previous images used to predict the radiation"""
   
   images=np.empty((0,size,size))
 
@@ -139,7 +146,7 @@ def loadRadiationData(dataDir,startDate,endDate,size, predictTime):
   labels=np.delete(labels, (range(0,predictTime-1)),axis=0)
   images=np.delete(images, (range(images.shape[0]-predictTime,images.shape[0])),axis=0)
 
-  return RadiationDataSet(images,labels,size)
+  return RadiationDataSet(images,labels,size,predictTime,previousImages)
 
 
 """### DEBUGGING TESTS

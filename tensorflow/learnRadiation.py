@@ -5,6 +5,7 @@ import scipy.io as sio
 
 windowSize=151
 predictTime=5
+previousImages=5
 trainInitDate=[2016, 1, 1]
 trainEndDate=[2016, 1, 11]
 dataFolder='../data/-0.06-39.99/'
@@ -13,11 +14,11 @@ validationInitDate = [2015, 1, 1]
 validationEndDate = [2015, 2, 1]
 
 # Import data
-dataset=loadData.loadRadiationData(dataFolder,trainInitDate,trainEndDate,windowSize,predictTime)
+dataset=loadData.loadRadiationData(dataFolder,trainInitDate,trainEndDate,windowSize,predictTime,previousImages)
 
 # Create the model
-x = tf.placeholder(tf.float32, [None, windowSize , windowSize,])
-layer1 = tf.layers.dense(tf.reshape(x,[-1, windowSize*windowSize]), 100, activation=tf.nn.relu)
+x = tf.placeholder(tf.float32, [None, windowSize , windowSize, previousImages])
+layer1 = tf.layers.dense(tf.reshape(x,[-1, windowSize*windowSize*previousImages]), 100, activation=tf.nn.relu)
 y = tf.layers.dense(layer1, predictTime)
 
 # Define loss and optimizer
@@ -29,7 +30,7 @@ train_step = tf.train.AdamOptimizer().minimize(loss)
 sess = tf.InteractiveSession()
 tf.global_variables_initializer().run()
 # Train
-for _ in range(10):
+for _ in range(100):
   batch_xs, batch_ys = dataset.next_batch(200)
   _train, lossValue = sess.run([train_step, loss], feed_dict={x: batch_xs, y_: batch_ys})
   print(str(dataset.epochs_completed) + ' -> ' + str(lossValue))
@@ -37,7 +38,7 @@ for _ in range(10):
 
 
 # Test trained model
-valSet=loadData.loadRadiationData(dataFolder,validationInitDate,validationEndDate,windowSize,predictTime)
+valSet=loadData.loadRadiationData(dataFolder,validationInitDate,validationEndDate,windowSize,predictTime,previousImages)
 result=np.empty((0,predictTime))
 labels=np.empty((0,predictTime))
 while(valSet.epochs_completed!=1):
