@@ -68,9 +68,9 @@ class RadiationDataSet(object):
 
     for i in xrange(start,end):
       batch=np.append(batch,np.reshape(self._images[self._perm[i],:,:],[1,self._size,self._size]),axis=0)
-      batchLabels.append(self._labels[self._perm[i]])
+      batchLabels.append(self._labels[self._perm[i],:])
 
-    return batch, np.array(batchLabels).reshape((-1,1))
+    return batch, np.array(batchLabels)
       
 
   def next_batch(self, batch_size):
@@ -103,13 +103,19 @@ class RadiationDataSet(object):
       self._val_index = batch_size
       assert batch_size <= self._num_examples
     end = self._val_index
-    return self._images[start:end,:,:], self._labels[start:end]
+    return self._images[start:end,:,:], self._labels[start:end,:]
 
-def loadRadiationData(dataDir,startDate,endDate,size):
+def loadRadiationData(dataDir,startDate,endDate,size, predictTime):
   """ Reads the files from the different folders and loads a RadiationDataset ready to use it in the training"""
+  """ 	dataDir: folder where the data is stored
+	startDate: first day that will be loaded in format [year, month, day]
+	endDate: Day to stop loading data in format [year, month, day]
+	size: window size around the center of the image
+	predictTime: Number of measures to be predicted after the last input"""
   
   images=np.empty((0,size,size))
 
+  ##Load satelite data
   while(startDate!=endDate):
     filePath = dataDir+'/'+str(startDate[0])+'/'+str(startDate[1])+'/'+str(startDate[2])+'.mat'
     if os.path.isfile(filePath):
@@ -117,13 +123,23 @@ def loadRadiationData(dataDir,startDate,endDate,size):
 	images=np.append(images,image,axis=0)
     else:
 	print(str(startDate) + ' not available')
-
-    
     nextDay(startDate)
 
-  labels=images[:,int((size+1)/2),int((size+1)/2)]
-  return RadiationDataSet(images,labels,size)
+  ##Generate labels
+  labels=images[:,int((size+1)/2),int((size+1)/2)].reshape((-1,1))
+  labels=np.delete(labels, (0), axis=0) ##delete first instance to shift the array and actually predict something
 
+  ##keep shifting and accumulating to add all the outputs
+  auxlabels=labels
+  for i in xrange(1,predictTime):
+    auxlabels=np.roll(auxlabels,-1,axis=0)
+    labels=np.append(labels,auxlabels, axis=1)
+
+  ##delete instances that are not suitable to use
+  labels=np.delete(labels, (range(0,predictTime-1)),axis=0)
+  images=np.delete(images, (range(images.shape[0]-predictTime,images.shape[0])),axis=0)
+
+  return RadiationDataSet(images,labels,size)
 
 
 """### DEBUGGING TESTS
@@ -131,7 +147,7 @@ day=loadMatFile('../data/-0.06-39.99/2016/1/1.mat')
 print(day)
 print(day.shape)
 
-dataset=loadRadiationData('../data/-0.06-39.99/',[2016, 1, 1],[2016, 1, 11],151)
+dataset=loadRadiationData('../data/-0.06-39.99/',[2016, 1, 1],[2016, 1, 11],151,2)
 rad,label=dataset.next_Valbatch(300)
 rad,label=dataset.next_Valbatch(300)
 rad,label=dataset.next_Valbatch(300)
