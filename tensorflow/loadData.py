@@ -167,8 +167,15 @@ def loadRadiationData(dataDir,startDate,endDate,size, predictTime, previousImage
   ##delete instances that are not suitable to use
   labels=np.delete(labels, (range(0,predictTime-1)),axis=0)
   images=np.delete(images, (range(images.shape[0]-predictTime,images.shape[0])),axis=0)
+
+  ##Produce relevant copernicus information for the problem
   if (loadCopernicus):
-    copernicus=np.delete(copernicus, (range(copernicus.shape[0]-predictTime,copernicus.shape[0])),axis=0)
+    copernicus=np.delete(copernicus, (0), axis=0) ##delete first instance to shift the array
+    auxCop=copernicus
+    for i in xrange(1,predictTime):
+      auxCop=np.roll(auxCop,-1,axis=0)
+      copernicus=np.append(copernicus,auxCop, axis=1)
+    copernicus=np.delete(copernicus, (range(0,predictTime-1)),axis=0)
 
   return RadiationDataSet(images,labels,size,predictTime,previousImages,copernicus)
 
