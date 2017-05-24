@@ -29,7 +29,7 @@ def nextDay(startDay):
 
 class RadiationDataSet(object):
   """Class that holds a radiation dataset and offers batch functions to provide data to train"""
-  def __init__(self, images, labels, size, predictTime, previousImages):
+  def __init__(self, images, labels, size, predictTime, previousImages,copernicus):
     assert images.shape[0] == labels.shape[0], (
           "images.shape: %s labels.shape: %s" % (images.shape,
                                                  labels.shape))
@@ -46,6 +46,16 @@ class RadiationDataSet(object):
     self._epochs_completed = 0
     self._index_in_epoch = 0
     self._val_index=0
+
+    self._copernicus=copernicus
+    self._copernicusAvailable=True
+    if (copernicus.shape[0]==0):
+	print("WARNING: Copernicus information NOT available")
+	self._copernicusAvailable=False
+    else:
+ 	assert images.shape[0] == copernicus.shape[0], (
+          "images.shape: %s copernicus.shape: %s" % (images.shape,
+                                                 copernicus.shape))
 
   @property
   def images(self):
@@ -67,6 +77,7 @@ class RadiationDataSet(object):
     """Creates a batch with the images in the permutation self._perm"""
     batch=np.empty((0,self._size,self._size,self._prevImg)) 
     batchLabels=[]
+    batchCopernicus=[]
 
     for i in xrange(start,end):
       auxBatch= np.empty((self._size,self._size,0)) 
@@ -74,8 +85,13 @@ class RadiationDataSet(object):
         auxBatch=np.append(auxBatch, np.reshape(self._images[j,:,:],[self._size,self._size,1]), axis=2)
       batch=np.append(batch,np.reshape(auxBatch,[1,self._size,self._size,self._prevImg]),axis=0)
       batchLabels.append(self._labels[self._perm[i],:])
+      if(self._copernicusAvailable):
+	batchCopernicus.append(self._copernicus[self._perm[i],:])
 
-    return batch, np.array(batchLabels)
+    if(self._copernicusAvailable):
+      return batch, np.array(batchLabels), np.array(batchCopernicus)
+    else:
+      return batch, np.array(batchLabels)
       
 
   def next_batch(self, batch_size):
@@ -111,16 +127,18 @@ class RadiationDataSet(object):
     end = self._val_index
     return self.createBatch(start,end)
 
-def loadRadiationData(dataDir,startDate,endDate,size, predictTime, previousImages):
+def loadRadiationData(dataDir,startDate,endDate,size, predictTime, previousImages, loadCopernicus=True):
   """ Reads the files from the different folders and loads a RadiationDataset ready to use it in the training"""
   """ 	dataDir: folder where the data is stored
 	startDate: first day that will be loaded in format [year, month, day]
 	endDate: Day to stop loading data in format [year, month, day]
 	size: window size around the center of the image
 	predictTime: Number of measures to be predicted after the last input
-	previousImages: Number of previous images used to predict the radiation"""
+	previousImages: Number of previous images used to predict the radiation
+        loadCopernicus: True False value to load the copernicus information or not"""
   
   images=np.empty((0,size,size))
+  copernicus=np.empty((0,1))
 
   ##Load satelite data
   while(startDate!=endDate):
@@ -128,6 +146,10 @@ def loadRadiationData(dataDir,startDate,endDate,size, predictTime, previousImage
     if os.path.isfile(filePath):
 	image=np.swapaxes(loadMatFile(filePath),0,2)
 	images=np.append(images,image,axis=0)
+        if (loadCopernicus):
+	  copernicusPath = dataDir+'/'+str(startDate[0])+'/'+str(startDate[1])+'/Copernicus_'+str(startDate[2])+'.mat'
+	  copInput=loadMatFile(copernicusPath)
+	  copernicus=np.append(copernicus,copInput,axis=0)
     else:
 	print(str(startDate) + ' not available')
     nextDay(startDate)
@@ -145,8 +167,10 @@ def loadRadiationData(dataDir,startDate,endDate,size, predictTime, previousImage
   ##delete instances that are not suitable to use
   labels=np.delete(labels, (range(0,predictTime-1)),axis=0)
   images=np.delete(images, (range(images.shape[0]-predictTime,images.shape[0])),axis=0)
+  if (loadCopernicus):
+    copernicus=np.delete(copernicus, (range(copernicus.shape[0]-predictTime,copernicus.shape[0])),axis=0)
 
-  return RadiationDataSet(images,labels,size,predictTime,previousImages)
+  return RadiationDataSet(images,labels,size,predictTime,previousImages,copernicus)
 
 
 """### DEBUGGING TESTS

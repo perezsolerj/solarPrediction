@@ -55,7 +55,7 @@ saver = tf.train.Saver()
 print("\n -> Starting to train until "+ str(max_epochs) + " epochs or " +  str(runUntil) + " <-\n")
 now = datetime.datetime.now()
 while (dataset.epochs_completed < max_epochs and now < runUntil):
-  batch_xs, batch_ys = dataset.next_batch(miniBatchSize)
+  batch_xs, batch_ys, batch_x2s = dataset.next_batch(miniBatchSize)
   _train, summary,  lossValue = sess.run([train_step, merged, loss], feed_dict={x: batch_xs, y_: batch_ys})
 
   logger.addMiniBatchResults(lossValue, dataset.epochs_completed, summary)
@@ -75,19 +75,21 @@ valSet=loadData.loadRadiationData(dataFolder,validationInitDate,validationEndDat
 result=np.empty((0,predictTime))
 labels=np.empty((0,predictTime))
 while(valSet.epochs_completed!=1):
-  batch_xs, batch_ys = valSet.next_Valbatch(50)
+  batch_xs, batch_ys, batch_x2s = valSet.next_Valbatch(50)
   predict = sess.run(y, feed_dict={x: batch_xs, y_: batch_ys})
   result=np.concatenate((result,predict),axis=0)
   labels=np.concatenate((labels,batch_ys),axis=0)
 sio.savemat('predict.mat', {'predict':result})
 sio.savemat('labels.mat', {'labels':labels})
 
+print("\n -> Finished evaluating, saving evaluated training data <- \n")
+
 ## Test training set
 result=np.empty((0,predictTime))
 labels=np.empty((0,predictTime))
 aux_epochs=dataset.epochs_completed
 while(dataset.epochs_completed!=aux_epochs+1):
-  batch_xs, batch_ys = dataset.next_Valbatch(50)
+  batch_xs, batch_ys, batch_x2s = dataset.next_Valbatch(50)
   predict = sess.run(y, feed_dict={x: batch_xs, y_: batch_ys})
   result=np.concatenate((result,predict),axis=0)
   labels=np.concatenate((labels,batch_ys),axis=0)
