@@ -100,7 +100,7 @@ class RadiationDataSet(object):
     """Return the next `batch_size` examples from this data set without permuting."""  
     start = self._val_index
     self._val_index += batch_size
-    self._perm=np.arange(self._prevImg,self._num_examples)
+    self._perm=np.arange(self._prevImg,self._num_examples+self._prevImg)
     if self._val_index > self._num_examples:
       # Finished epoch
       # Start next epoch
