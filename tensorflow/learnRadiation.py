@@ -33,7 +33,9 @@ dataset=loadData.loadRadiationData(dataFolder,trainInitDate,trainEndDate,windowS
 
 # Create the model
 x = tf.placeholder(tf.float32, [None, windowSize , windowSize, previousImages])
-y = model.basicInference(x, windowSize, predictTime, previousImages)
+copernicus = tf.placeholder(tf.float32, [None, predictTime])
+
+y = model.basicCopInference(x, windowSize, predictTime, previousImages,copernicus)
 
 # Define loss and optimizer
 y_ = tf.placeholder(tf.float32, [None, predictTime])
@@ -56,7 +58,7 @@ print("\n -> Starting to train until "+ str(max_epochs) + " epochs or " +  str(r
 now = datetime.datetime.now()
 while (dataset.epochs_completed < max_epochs and now < runUntil):
   batch_xs, batch_ys, batch_x2s = dataset.next_batch(miniBatchSize)
-  _train, summary,  lossValue = sess.run([train_step, merged, loss], feed_dict={x: batch_xs, y_: batch_ys})
+  _train, summary,  lossValue = sess.run([train_step, merged, loss], feed_dict={x: batch_xs, y_: batch_ys, copernicus: batch_x2s})
 
   logger.addMiniBatchResults(lossValue, dataset.epochs_completed, summary)
   if (logger.newEpoch()):
@@ -76,7 +78,7 @@ result=np.empty((0,predictTime))
 labels=np.empty((0,predictTime))
 while(valSet.epochs_completed!=1):
   batch_xs, batch_ys, batch_x2s = valSet.next_Valbatch(50)
-  predict = sess.run(y, feed_dict={x: batch_xs, y_: batch_ys})
+  predict = sess.run(y, feed_dict={x: batch_xs, y_: batch_ys, copernicus: batch_x2s})
   result=np.concatenate((result,predict),axis=0)
   labels=np.concatenate((labels,batch_ys),axis=0)
 sio.savemat('predict.mat', {'predict':result})
@@ -90,7 +92,7 @@ labels=np.empty((0,predictTime))
 aux_epochs=dataset.epochs_completed
 while(dataset.epochs_completed!=aux_epochs+1):
   batch_xs, batch_ys, batch_x2s = dataset.next_Valbatch(50)
-  predict = sess.run(y, feed_dict={x: batch_xs, y_: batch_ys})
+  predict = sess.run(y, feed_dict={x: batch_xs, y_: batch_ys, copernicus: batch_x2s})
   result=np.concatenate((result,predict),axis=0)
   labels=np.concatenate((labels,batch_ys),axis=0)
 sio.savemat('predictTRAIN.mat', {'predict':result})

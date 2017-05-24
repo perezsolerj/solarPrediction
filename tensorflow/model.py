@@ -36,6 +36,20 @@ def basicInference(images, windowSize, predTime, prevImg):
   dense1 = tf.layers.dense(tf.reshape(pool2,[-1, (windowSize/4)*(windowSize/4)*35]), 300, activation=tf.nn.relu)
   return tf.layers.dense(dense1, predTime)
 
+def basicCopInference(images, windowSize, predTime, prevImg, copernicus):
+  conv1 = tf.layers.conv2d(images, 20, [5,5], padding='same', activation=tf.nn.relu)
+  pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2)
+
+  conv2 = tf.layers.conv2d(pool1, 35, [5,5], padding='same', activation=tf.nn.relu)
+  pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
+
+  pool2_flat = tf.reshape(pool2, [-1, (windowSize/4)*(windowSize/4)*35])
+  pool2_flatCop = tf.concat([pool2_flat, copernicus], 1)
+
+  dense1 = tf.layers.dense(pool2_flatCop, units=300, activation=tf.nn.relu)
+  return tf.layers.dense(dense1, predTime)
+
+
 """ ==============================================================================
 
 				LOSS FUNCTIONS
