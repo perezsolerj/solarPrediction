@@ -3,17 +3,17 @@
 %%in first line containing 1 year (+1day) information (2016-1-1) -> (2017-1-1)
 
 %%Input
-fullData=UJI2016v2;
+fullData=UJI2015;
 dataFolder='../data/';
-location=[-0.06 39.99];
+location='UJI'; %%Edit getCoords to add new locations
 
 %Data
-nextYear=2017;
-initDay=[2016 1 1];
+nextYear=2016;
+initDay=[2015 1 1];
 initMeasure=16;
 
 
-expLocation=strcat(dataFolder,num2str(location(1)),'-',num2str(location(2)));
+expLocation=strcat(dataFolder,location);
 mkdir(expLocation); %%Should not need to create the folder, but just in case...
 
 yearFolder=strcat(expLocation,'/',num2str(initDay(1)));

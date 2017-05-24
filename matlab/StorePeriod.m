@@ -4,14 +4,14 @@
 initDay=[2016 1 1];
 endDay=[2017 1 1];
 size=[151 151];
-location=[-0.06 39.99];
+location='UJI'; %%Edit getCoords to add new locations
 dataFolder='../data/';
 reDownload=0
 
 %Data
 missingDays=0;
 
-expLocation=strcat(dataFolder,num2str(location(1)),'-',num2str(location(2)));
+expLocation=strcat(dataFolder,location);
 mkdir(expLocation);
 
 yearFolder=strcat(expLocation,'/',num2str(initDay(1)));
@@ -26,7 +26,7 @@ while(~isequal(initDay,endDay))
     disp(strcat(monthFolder,'/',num2str(initDay(3)),'.mat',' already downloaded'))
   else
     try %% try and catch to ignore download errors and download the maximum possible days without stopping
-      data = downloadFunction('location',location,'size',size,'initDate',initDay);
+      data = downloadFunction('location',getCoords(location),'size',size,'initDate',initDay);
       save(strcat(monthFolder,'/',num2str(initDay(3))),'data');
     catch
       disp(strcat('Error downloading ',monthFolder,'/',num2str(initDay(3))))

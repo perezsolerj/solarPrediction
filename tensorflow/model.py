@@ -75,8 +75,7 @@ class trainLogger:
 
 
   def __init__(self,summariesDIR, sess, miniBatchSize, instances):
-    self._summDIR = summariesDIR
-    self._train_writer = tf.summary.FileWriter(summariesDIR + '/train', sess.graph)
+    ## Error vars
     self._minibatch = 0
     self._epoch = 0
     self._epochLoss= 0
@@ -85,10 +84,20 @@ class trainLogger:
     self._Nminibatches=int(instances/miniBatchSize)
     self._showEpoch=False
     self._lastLoss=0
+
+    ## Time vars
     self._batchTime=time.time()
     self._epochTime=time.time()
     self._batchElapsed=0
     self._epochElapsed=0
+
+    ## Create new summary vars
+    self._sess=sess
+    self._summDIR = summariesDIR
+    self._train_writer = tf.summary.FileWriter(summariesDIR + '/train', sess.graph)
+    self._TFEpochLoss = tf.Variable(500, name="EpochLoss")
+    self._TFEpochLoss_summ = tf.summary.scalar("EpochLoss", self._TFEpochLoss)
+    sess.run(self._TFEpochLoss.assign(500))
 
   def addMiniBatchResults(self, loss, epoch, summary):
     tick=time.time()
@@ -102,6 +111,7 @@ class trainLogger:
       self._showEpoch=True
       self._epochElapsed= round(tick - self._epochTime,2)
       self._epochTime=tick
+      self._sess.run(self._TFEpochLoss.assign(self._epochLoss/self._Nminibatches))
     self._epoch=epoch
 
   def newEpoch(self):

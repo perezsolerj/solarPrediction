@@ -9,8 +9,8 @@ import datetime
 """ PARAMETER AREA"""
 
 ##training parameters
-runUntil=datetime.datetime(2017,5,24,16,00)
-max_epochs=5
+runUntil=datetime.datetime(2017,5,25,9,30)
+max_epochs=10
 miniBatchSize=200
 
 ##Data Input parameters
@@ -18,12 +18,12 @@ windowSize=151
 predictTime=4
 previousImages=5
 trainInitDate=[2016, 1, 1]
-trainEndDate=[2016, 1, 10]
-dataFolder='../data/-0.06-39.99/'
+trainEndDate=[2016, 1, 11]
+dataFolder='../data/UJI/'
 
 ##Validation parameters
 validationInitDate = [2015, 1, 1]
-validationEndDate = [2015, 1, 10]
+validationEndDate = [2015, 1, 11]
 
 ##Summary parameters
 summariesDIR='/tmp/solarRad'
@@ -44,13 +44,16 @@ train_step = model.training(loss)
 sess = tf.InteractiveSession()
 tf.global_variables_initializer().run()
 
+##launch logger
+logger = model.trainLogger(summariesDIR, sess, miniBatchSize, dataset.num_examples)
+
 ##Merge summaries for tensorboard and saver for checkpoints
 merged = tf.summary.merge_all()
 saver = tf.train.Saver()
 
 # Train
+print("\n -> Starting to train until "+ str(max_epochs) + " epochs or " +  str(runUntil) + " <-\n")
 now = datetime.datetime.now()
-logger = model.trainLogger(summariesDIR, sess, miniBatchSize, dataset.num_examples)
 while (dataset.epochs_completed < max_epochs and now < runUntil):
   batch_xs, batch_ys = dataset.next_batch(miniBatchSize)
   _train, summary,  lossValue = sess.run([train_step, merged, loss], feed_dict={x: batch_xs, y_: batch_ys})
@@ -64,6 +67,9 @@ while (dataset.epochs_completed < max_epochs and now < runUntil):
   now=datetime.datetime.now()
 
 saver.save(sess,'models/FINALmodel.ckpt')
+
+print("\n -> Finished Training, evaluating with validation Data <- \n")
+
 # Test trained model
 valSet=loadData.loadRadiationData(dataFolder,validationInitDate,validationEndDate,windowSize,predictTime,previousImages)
 result=np.empty((0,predictTime))
