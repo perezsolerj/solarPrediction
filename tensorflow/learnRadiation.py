@@ -9,7 +9,7 @@ import datetime
 """ PARAMETER AREA"""
 
 ##training parameters
-runUntil=datetime.datetime(2017,5,25,16,00)
+runUntil=datetime.datetime(2017,5,26,9,30)
 max_epochs=1000
 miniBatchSize=200
 
@@ -18,7 +18,7 @@ windowSize=151
 predictTime=4
 previousImages=5
 trainInitDate=[2016, 1, 1]
-trainEndDate=[2016, 3, 1]
+trainEndDate=[2016, 1, 11]
 dataFolder='../data/UJI/'
 
 ## Test Input parameters
@@ -28,7 +28,7 @@ testEndDate=[2015, 1, 11]
 
 ##Validation parameters
 validationInitDate = [2015, 1, 11]
-validationEndDate = [2015, 3, 1]
+validationEndDate = [2015, 2, 1]
 
 ##Summary parameters
 summariesDIR='/tmp/solarRad'
@@ -45,6 +45,7 @@ y = model.basicCopInference(x, windowSize, predictTime, previousImages,copernicu
 
 # Define loss and optimizer
 y_ = tf.placeholder(tf.float32, [None, predictTime])
+
 loss = model.basicLoss(y_,y)
 
 train_step = model.training(loss)
@@ -74,15 +75,8 @@ while (dataset.epochs_completed < max_epochs and now < runUntil):
   logger.showResults()
 
   if (logger.testTime()):
-    aux_epochs=testDataset.epochs_completed
-    while(testDataset.epochs_completed!=aux_epochs+1):
-      batch_xs, batch_ys, batch_x2s = testDataset.next_Valbatch(50)
-      testLoss = sess.run(loss, feed_dict={x: batch_xs, y_: batch_ys, copernicus: batch_x2s})
-      logger.addMiniTestResults(testLoss)
-    logger.testEnd()
-      
-
-
+    testLoss, [result,labels] = model.evaluateModel(sess,testDataset,y,loss,[x, y_, copernicus], outputResults=False)
+    logger.TestResults(testLoss)
 
   now=datetime.datetime.now()
 
@@ -92,27 +86,14 @@ print("\n -> Finished Training, evaluating with validation Data <- \n")
 
 # Test trained model
 valSet=loadData.loadRadiationData(dataFolder,validationInitDate,validationEndDate,windowSize,predictTime,previousImages)
-result=np.empty((0,predictTime))
-labels=np.empty((0,predictTime))
-while(valSet.epochs_completed!=1):
-  batch_xs, batch_ys, batch_x2s = valSet.next_Valbatch(50)
-  predict = sess.run(y, feed_dict={x: batch_xs, y_: batch_ys, copernicus: batch_x2s})
-  result=np.concatenate((result,predict),axis=0)
-  labels=np.concatenate((labels,batch_ys),axis=0)
+valSetLoss, [result,labels] = model.evaluateModel(sess,valSet,y,loss,[x, y_, copernicus])
 sio.savemat('predict.mat', {'predict':result})
 sio.savemat('labels.mat', {'labels':labels})
 
 print("\n -> Finished evaluating, saving evaluated training data <- \n")
 
 ## Test training set
-result=np.empty((0,predictTime))
-labels=np.empty((0,predictTime))
-aux_epochs=dataset.epochs_completed
-while(dataset.epochs_completed!=aux_epochs+1):
-  batch_xs, batch_ys, batch_x2s = dataset.next_Valbatch(50)
-  predict = sess.run(y, feed_dict={x: batch_xs, y_: batch_ys, copernicus: batch_x2s})
-  result=np.concatenate((result,predict),axis=0)
-  labels=np.concatenate((labels,batch_ys),axis=0)
+trainingLoss, [result,labels] = model.evaluateModel(sess,dataset,y,loss,[x, y_, copernicus])
 sio.savemat('predictTRAIN.mat', {'predict':result})
 sio.savemat('labelsTRAIN.mat', {'labels':labels})
 

@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 import time
 
 
@@ -79,6 +80,30 @@ def training(loss):
 
 """ ==============================================================================
 
+				Evaluate Model
+
+============================================================================== """
+
+def evaluateModel(session, dataset, predictionLayer, lossLayer,placeHolders, outputResults=True):
+  predictTime=predictionLayer.shape[1]
+  result=np.empty((0,predictTime))
+  labels=np.empty((0,predictTime))
+  auxEpochs=dataset.epochs_completed
+  lossAcum=0
+  iterations=0
+  while(dataset.epochs_completed!=auxEpochs+1):
+    batch_xs, batch_ys, batch_x2s = dataset.next_Valbatch(50)
+    predict,loss = session.run([predictionLayer,lossLayer], feed_dict={placeHolders[0]: batch_xs, placeHolders[1]: batch_ys, placeHolders[2]: batch_x2s})
+    lossAcum=lossAcum+loss
+    iterations=iterations+1
+    if (outputResults):
+      result=np.concatenate((result,predict),axis=0)
+      labels=np.concatenate((labels,batch_ys),axis=0)
+  return lossAcum/iterations, [result,labels]
+
+
+""" ==============================================================================
+
 				TRAIN LOGGER
 
 ============================================================================== """
@@ -121,8 +146,6 @@ class trainLogger:
     sess.run(self._TFTestLoss.assign(50000))
 
     ## Test vars
-    self._testLoss=0
-    self._testIters=0
     self._lastTestLoss=0
 
   def addMiniBatchResults(self, loss, epoch, summary):
@@ -158,23 +181,12 @@ class trainLogger:
   def testTime(self):
     return (time.time()-self._lastTest)>self._testFrequency
 
-  def addMiniTestResults(self,testLoss):
-    self._testLoss = self._testLoss + testLoss
-    self._testIters = self._testIters+1
-
-  def testEnd(self):
-    self._lastTestLoss = self._testLoss /self._testIters
+  def TestResults(self,testLoss):
+    self._lastTestLoss = testLoss
     self._sess.run(self._TFTestLoss.assign(self._lastTestLoss))
-    self._testIters = 0
-    self._testLoss = 0
     self._lastTest=time.time()
     print('')
     print("-------------- Test: " + str(self._lastTestLoss) + " --------------")
     print('')
-
-
-
-
-
 
 
