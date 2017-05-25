@@ -179,7 +179,6 @@ def loadRadiationData(dataDir,startDate,endDate,size, predictTime, previousImage
     copernicus=np.delete(copernicus, (0),axis=1) ##Delete first instance because it is not in the correct order!
 
     copernicus=np.delete(copernicus, (range(copernicus.shape[0]-predictTime,copernicus.shape[0])),axis=0)
-  print(copernicus.shape)
 
   return RadiationDataSet(images,labels,size,predictTime,previousImages,copernicus)
 

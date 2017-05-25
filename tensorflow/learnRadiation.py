@@ -18,18 +18,24 @@ windowSize=151
 predictTime=4
 previousImages=5
 trainInitDate=[2016, 1, 1]
-trainEndDate=[2016, 1, 11]
+trainEndDate=[2016, 3, 1]
 dataFolder='../data/UJI/'
 
+## Test Input parameters
+testInitDate=[2015, 1, 1]
+testEndDate=[2015, 1, 11]
+
+
 ##Validation parameters
-validationInitDate = [2015, 1, 1]
-validationEndDate = [2015, 1, 11]
+validationInitDate = [2015, 1, 11]
+validationEndDate = [2015, 3, 1]
 
 ##Summary parameters
 summariesDIR='/tmp/solarRad'
 
 # Import data
-dataset=loadData.loadRadiationData(dataFolder,trainInitDate,trainEndDate,windowSize,predictTime,previousImages)
+dataset = loadData.loadRadiationData(dataFolder,trainInitDate,trainEndDate,windowSize,predictTime,previousImages)
+testDataset = loadData.loadRadiationData(dataFolder,testInitDate,testEndDate,windowSize,predictTime,previousImages)
 
 # Create the model
 x = tf.placeholder(tf.float32, [None, windowSize , windowSize, previousImages])
@@ -61,10 +67,22 @@ while (dataset.epochs_completed < max_epochs and now < runUntil):
   _train, summary,  lossValue = sess.run([train_step, merged, loss], feed_dict={x: batch_xs, y_: batch_ys, copernicus: batch_x2s})
 
   logger.addMiniBatchResults(lossValue, dataset.epochs_completed, summary)
+
   if (logger.newEpoch()):
     saver.save(sess,'models/model.ckpt')
 
   logger.showResults()
+
+  if (logger.testTime()):
+    aux_epochs=testDataset.epochs_completed
+    while(testDataset.epochs_completed!=aux_epochs+1):
+      batch_xs, batch_ys, batch_x2s = testDataset.next_Valbatch(50)
+      testLoss = sess.run(loss, feed_dict={x: batch_xs, y_: batch_ys, copernicus: batch_x2s})
+      logger.addMiniTestResults(testLoss)
+    logger.testEnd()
+      
+
+
 
   now=datetime.datetime.now()
 

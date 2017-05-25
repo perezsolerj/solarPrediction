@@ -104,14 +104,26 @@ class trainLogger:
     self._epochTime=time.time()
     self._batchElapsed=0
     self._epochElapsed=0
+    self._lastTest=time.time()
+    self._testFrequency=600 ##test will be performed each 600 seconds (10 minutes)
 
     ## Create new summary vars
     self._sess=sess
     self._summDIR = summariesDIR
     self._train_writer = tf.summary.FileWriter(summariesDIR + '/train', sess.graph)
-    self._TFEpochLoss = tf.Variable(500, name="EpochLoss")
+
+    self._TFEpochLoss = tf.Variable(50000, name="EpochLoss_")
     self._TFEpochLoss_summ = tf.summary.scalar("EpochLoss", self._TFEpochLoss)
-    sess.run(self._TFEpochLoss.assign(500))
+    sess.run(self._TFEpochLoss.assign(50000))
+
+    self._TFTestLoss = tf.Variable(50000, name="TestLoss_")
+    self._TFTestLoss_summ = tf.summary.scalar("TestLoss", self._TFTestLoss)
+    sess.run(self._TFTestLoss.assign(50000))
+
+    ## Test vars
+    self._testLoss=0
+    self._testIters=0
+    self._lastTestLoss=0
 
   def addMiniBatchResults(self, loss, epoch, summary):
     tick=time.time()
@@ -143,6 +155,22 @@ class trainLogger:
       self._showEpoch=False
       self._epochLoss=0
 
+  def testTime(self):
+    return (time.time()-self._lastTest)>self._testFrequency
+
+  def addMiniTestResults(self,testLoss):
+    self._testLoss = self._testLoss + testLoss
+    self._testIters = self._testIters+1
+
+  def testEnd(self):
+    self._lastTestLoss = self._testLoss /self._testIters
+    self._sess.run(self._TFTestLoss.assign(self._lastTestLoss))
+    self._testIters = 0
+    self._testLoss = 0
+    self._lastTest=time.time()
+    print('')
+    print("-------------- Test: " + str(self._lastTestLoss) + " --------------")
+    print('')
 
 
 
