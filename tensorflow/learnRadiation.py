@@ -9,8 +9,8 @@ import datetime
 """ PARAMETER AREA"""
 
 ##training parameters
-runUntil=datetime.datetime(2017,5,25,9,30)
-max_epochs=10
+runUntil=datetime.datetime(2017,5,25,16,00)
+max_epochs=1000
 miniBatchSize=200
 
 ##Data Input parameters
@@ -33,7 +33,7 @@ dataset=loadData.loadRadiationData(dataFolder,trainInitDate,trainEndDate,windowS
 
 # Create the model
 x = tf.placeholder(tf.float32, [None, windowSize , windowSize, previousImages])
-copernicus = tf.placeholder(tf.float32, [None, predictTime])
+copernicus = tf.placeholder(tf.float32, [None, predictTime+previousImages])
 
 y = model.basicCopInference(x, windowSize, predictTime, previousImages,copernicus)
 

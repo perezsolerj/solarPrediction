@@ -165,37 +165,39 @@ def loadRadiationData(dataDir,startDate,endDate,size, predictTime, previousImage
     labels=np.append(labels,auxlabels, axis=1)
 
   ##delete instances that are not suitable to use
-  labels=np.delete(labels, (range(0,predictTime-1)),axis=0)
+  labels=np.delete(labels, (range(labels.shape[0]-predictTime+1,labels.shape[0])),axis=0)
   images=np.delete(images, (range(images.shape[0]-predictTime,images.shape[0])),axis=0)
 
-  ##Produce relevant copernicus information for the problem
+  ##Produce relevant copernicus information for the problem (from -previousImages to predictTime information)
   if (loadCopernicus):
-    copernicus=np.delete(copernicus, (0), axis=0) ##delete first instance to shift the array
     auxCop=copernicus
-    for i in xrange(1,predictTime):
+    auxCop=np.roll(auxCop,previousImages,axis=0)
+    for i in xrange(1,predictTime+previousImages+1):
       auxCop=np.roll(auxCop,-1,axis=0)
       copernicus=np.append(copernicus,auxCop, axis=1)
-    copernicus=np.delete(copernicus, (range(0,predictTime-1)),axis=0)
+
+    copernicus=np.delete(copernicus, (0),axis=1) ##Delete first instance because it is not in the correct order!
+
+    copernicus=np.delete(copernicus, (range(copernicus.shape[0]-predictTime,copernicus.shape[0])),axis=0)
+  print(copernicus.shape)
 
   return RadiationDataSet(images,labels,size,predictTime,previousImages,copernicus)
 
 
 """### DEBUGGING TESTS
-day=loadMatFile('../data/-0.06-39.99/2016/1/1.mat')
+day=loadMatFile('../data/UJI/2016/1/1.mat')
 print(day)
 print(day.shape)
 
-dataset=loadRadiationData('../data/-0.06-39.99/',[2016, 1, 1],[2016, 1, 11],151,2)
-rad,label=dataset.next_Valbatch(300)
-rad,label=dataset.next_Valbatch(300)
-rad,label=dataset.next_Valbatch(300)
-rad,label=dataset.next_Valbatch(300)
-rad,label=dataset.next_Valbatch(300)
-rad,label=dataset.next_Valbatch(300)
-print(dataset.epochs_completed)
+dataset=loadRadiationData('../data/UJI/',[2016, 1, 8],[2016, 1, 9],151,4,5)
+rad,label,cop=dataset.next_Valbatch(50)
+
 print(rad.shape)
+print(rad[42,76,76,:])
 print(label.shape)
-print(label) 
+print(label[42,:])
+print(cop.shape) 
+print(cop[42,:]*3)
 ##print(rad)"""
 
 
