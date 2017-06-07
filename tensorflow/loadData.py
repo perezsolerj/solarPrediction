@@ -75,7 +75,7 @@ class RadiationDataSet(object):
 
   def createBatch(self,start,end):
     """Creates a batch with the images in the permutation self._perm"""
-    batch=np.empty((0,self._size,self._size,self._prevImg)) 
+    batch=[]
     batchLabels=[]
     batchCopernicus=[]
 
@@ -83,15 +83,15 @@ class RadiationDataSet(object):
       auxBatch= np.empty((self._size,self._size,0)) 
       for j in xrange(self._perm[i]-self._prevImg+1,self._perm[i]+1):
         auxBatch=np.append(auxBatch, np.reshape(self._images[j,:,:],[self._size,self._size,1]), axis=2)
-      batch=np.append(batch,np.reshape(auxBatch,[1,self._size,self._size,self._prevImg]),axis=0)
+      batch.append(auxBatch)
       batchLabels.append(self._labels[self._perm[i],:])
       if(self._copernicusAvailable):
 	batchCopernicus.append(self._copernicus[self._perm[i],:])
 
     if(self._copernicusAvailable):
-      return batch, np.array(batchLabels), np.array(batchCopernicus)
+      return np.array(batch), np.array(batchLabels), np.array(batchCopernicus)
     else:
-      return batch, np.array(batchLabels)
+      return np.array(batch), np.array(batchLabels)
       
 
   def next_batch(self, batch_size):
@@ -137,7 +137,7 @@ def loadRadiationData(dataDir,startDate,endDate,size, predictTime, previousImage
 	previousImages: Number of previous images used to predict the radiation
         loadCopernicus: True False value to load the copernicus information or not"""
   
-  images=np.empty((0,size,size))
+  imageList=[]
   copernicus=np.empty((0,1))
 
   ##Load satelite data
@@ -145,7 +145,7 @@ def loadRadiationData(dataDir,startDate,endDate,size, predictTime, previousImage
     filePath = dataDir+'/'+str(startDate[0])+'/'+str(startDate[1])+'/'+str(startDate[2])+'.mat'
     if os.path.isfile(filePath):
 	image=np.swapaxes(loadMatFile(filePath),0,2)
-	images=np.append(images,image,axis=0)
+        imageList.extend(image)
         if (loadCopernicus):
 	  copernicusPath = dataDir+'/'+str(startDate[0])+'/'+str(startDate[1])+'/Copernicus_'+str(startDate[2])+'.mat'
 	  copInput=loadMatFile(copernicusPath)
@@ -153,6 +153,9 @@ def loadRadiationData(dataDir,startDate,endDate,size, predictTime, previousImage
     else:
 	print(str(startDate) + ' not available')
     nextDay(startDate)
+
+  images=np.array(imageList)
+  imageList=[] ## Delete imageList to free memory
 
   ##Generate labels
   labels=images[:,int((size+1)/2),int((size+1)/2)].reshape((-1,1))
@@ -184,11 +187,11 @@ def loadRadiationData(dataDir,startDate,endDate,size, predictTime, previousImage
 
 
 """### DEBUGGING TESTS
-day=loadMatFile('../data/UJI/2016/1/1.mat')
-print(day)
-print(day.shape)
+#day=loadMatFile('../data/UJI/2016/1/1.mat')
+#print(day)
+#print(day.shape)
 
-dataset=loadRadiationData('../data/UJI/',[2016, 1, 8],[2016, 1, 9],151,4,5)
+dataset=loadRadiationData('../data/UJI/',[2016, 1, 8],[2016, 1, 10],151,4,5)
 rad,label,cop=dataset.next_Valbatch(50)
 
 print(rad.shape)
