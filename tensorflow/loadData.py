@@ -30,11 +30,11 @@ def nextDay(startDay):
 class RadiationDataSet(object):
   """Class that holds a radiation dataset and offers batch functions to provide data to train"""
   def __init__(self, images, labels, size, predictTime, previousImages,copernicus):
-    assert images.shape[0] == labels.shape[0], (
+    assert images.shape[0] == labels.shape[0]+1, (
           "images.shape: %s labels.shape: %s" % (images.shape,
                                                  labels.shape))
     self._num_examples = images.shape[0]-previousImages
-    self._perm=np.arange(previousImages,self._num_examples+previousImages)
+    self._perm=np.arange(previousImages,self._num_examples+previousImages-predictTime)
     np.random.shuffle(self._perm)
 
     self._images = images
@@ -80,9 +80,7 @@ class RadiationDataSet(object):
     batchCopernicus=[]
 
     for i in xrange(start,end):
-      auxBatch= np.empty((self._size,self._size,0)) 
-      for j in xrange(self._perm[i]-self._prevImg+1,self._perm[i]+1):
-        auxBatch=np.append(auxBatch, np.reshape(self._images[j,:,:],[self._size,self._size,1]), axis=2)
+      auxBatch=np.swapaxes(self._images[self._perm[i]-self._prevImg+1:self._perm[i]+1,:,:],0,2)
       batch.append(auxBatch)
       batchLabels.append(self._labels[self._perm[i],:])
       if(self._copernicusAvailable):
@@ -116,7 +114,7 @@ class RadiationDataSet(object):
     """Return the next `batch_size` examples from this data set without permuting."""  
     start = self._val_index
     self._val_index += batch_size
-    self._perm=np.arange(self._prevImg,self._num_examples+self._prevImg)
+    self._perm=np.arange(self._prevImg,self._num_examples+self._prevImg-self._predTime)
     if self._val_index > self._num_examples:
       # Finished epoch
       # Start next epoch
@@ -147,7 +145,7 @@ def loadRadiationData(dataDir,startDate,endDate,size, predictTime, previousImage
 	image=np.swapaxes(loadMatFile(filePath),0,2)
         imageList.extend(image)
         if (loadCopernicus):
-	  copernicusPath = dataDir+'/'+str(startDate[0])+'/'+str(startDate[1])+'/Copernicus_'+str(startDate[2])+'.mat'
+	  copernicusPath = dataDir+'/'+str(startDate[0])+'/'+str(startDate[1])+'/CCopernicus_'+str(startDate[2])+'.mat'
 	  copInput=loadMatFile(copernicusPath)
 	  copernicus=np.append(copernicus,copInput,axis=0)
     else:
@@ -162,26 +160,35 @@ def loadRadiationData(dataDir,startDate,endDate,size, predictTime, previousImage
   labels=np.delete(labels, (0), axis=0) ##delete first instance to shift the array and actually predict something
 
   ##keep shifting and accumulating to add all the outputs
-  auxlabels=labels
+  labelsList=[]
+  labelsList.append(labels)
   for i in xrange(1,predictTime):
-    auxlabels=np.roll(auxlabels,-1,axis=0)
-    labels=np.append(labels,auxlabels, axis=1)
+    labels=np.roll(labels,-1,axis=0)
+    labelsList.append(labels)
 
+  labels=np.swapaxes(np.array(labelsList).reshape(predictTime,-1),0,1)
+  labelsList=[]
+
+  """ Note: Deleting takes too much time and memory resources, we just ignore them in training"""
   ##delete instances that are not suitable to use
-  labels=np.delete(labels, (range(labels.shape[0]-predictTime+1,labels.shape[0])),axis=0)
-  images=np.delete(images, (range(images.shape[0]-predictTime,images.shape[0])),axis=0)
+  #labels=np.delete(labels, (range(labels.shape[0]-predictTime+1,labels.shape[0])),axis=0)
+  #images=np.delete(images, (range(images.shape[0]-predictTime,images.shape[0])),axis=0)
 
   ##Produce relevant copernicus information for the problem (from -previousImages to predictTime information)
   if (loadCopernicus):
-    auxCop=copernicus
-    auxCop=np.roll(auxCop,previousImages,axis=0)
+    copList=[]
+    copList.append(copernicus)
+    copernicus=np.roll(copernicus,previousImages,axis=0)
     for i in xrange(1,predictTime+previousImages+1):
-      auxCop=np.roll(auxCop,-1,axis=0)
-      copernicus=np.append(copernicus,auxCop, axis=1)
+      copernicus=np.roll(copernicus,-1,axis=0)
+      copList.append(copernicus)
+
+    copernicus=np.swapaxes(np.array(copList).reshape(predictTime+previousImages+1,-1),0,1)
+    copList=[]
 
     copernicus=np.delete(copernicus, (0),axis=1) ##Delete first instance because it is not in the correct order!
 
-    copernicus=np.delete(copernicus, (range(copernicus.shape[0]-predictTime,copernicus.shape[0])),axis=0)
+    ##copernicus=np.delete(copernicus, (range(copernicus.shape[0]-predictTime,copernicus.shape[0])),axis=0)
 
   return RadiationDataSet(images,labels,size,predictTime,previousImages,copernicus)
 
@@ -199,7 +206,7 @@ print(rad[42,76,76,:])
 print(label.shape)
 print(label[42,:])
 print(cop.shape) 
-print(cop[42,:]*3)
+print(cop[42,:])
 ##print(rad)"""
 
 
